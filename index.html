@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#140c24">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Mistério">
+  <title>Mistério no Tapete Vermelho</title>
+  <meta name="description" content="Um RPG em pixel art numa noite de estreia. Crie seu personagem com o seu rosto, converse com todo mundo e descubra o tema secreto.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="preload" href="assets/fontes/PixelifySans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/estilo.css?v=202611022238">
+</head>
+<body>
+  <div id="app">
+    <canvas id="tela" aria-label="Cenário do jogo"></canvas>
+
+    <!-- Celular em pé: pedir para girar -->
+    <div id="girar" hidden>
+      <div class="girar-caixa moldura">
+        <div class="girar-celular" aria-hidden="true"><span></span></div>
+        <h2>Gire o celular</h2>
+        <p>O jogo fica muito melhor com o celular <b>deitado</b> e em <b>tela cheia</b>.</p>
+        <div class="nota girar-ios" id="girar-ios" hidden>
+          <p><b>No iPhone é diferente:</b> o Safari não deixa sites entrarem em tela cheia nem girarem sozinhos. Faça assim:</p>
+          <ol>
+            <li><b>Libere a rotação:</b> puxe a Central de Controle (canto de cima à direita) e desligue o cadeado de rotação.</li>
+            <li><b>Gire o iPhone</b> para deitado.</li>
+            <li><b>Para tela cheia:</b> toque em Compartilhar (quadrado com seta) → <b>Adicionar à Tela de Início</b> → abra o jogo pelo ícone novo. Ele abre sem as barras do Safari, como um aplicativo.</li>
+          </ol>
+        </div>
+        <div class="menu">
+          <button class="btn principal" id="girar-tela-cheia">Tela cheia e deitar</button>
+          <button class="btn fraco" id="girar-assim">Jogar em pé mesmo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carregando -->
+    <div id="carregando" class="tela-cheia">
+      <div class="logo"><span class="estrela">★</span> Mistério <em>no</em> Tapete Vermelho</div>
+      <div class="barra"><i id="barra-carga"></i></div>
+      <p id="texto-carga">Estendendo o tapete vermelho…</p>
+    </div>
+
+    <!-- Título -->
+    <div id="titulo" class="tela-cheia" hidden>
+      <div class="titulo-caixa moldura">
+        <div class="logo grande"><span class="estrela">★</span> Mistério <em>no</em> Tapete Vermelho</div>
+        <p class="sub" id="titulo-sub">Uma festa de gala. Um tapete vermelho. Um tema que ninguém quer contar…<br>Converse com todo mundo e descubra o segredo.</p>
+        <div class="menu" id="menu-titulo">
+          <button class="btn principal" data-acao="continuar" id="btn-continuar">Continuar</button>
+          <button class="btn" data-acao="novo">Novo jogo</button>
+          <button class="btn" data-acao="camarim">Camarim (personagem)</button>
+          <button class="btn" data-acao="config">Configurações</button>
+          <button class="btn fraco" data-acao="creditos">Créditos</button>
+        </div>
+        <p class="contador" id="contador-titulo"></p>
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" hidden>
+      <div class="hud-esq">
+        <div id="hud-eu" class="moldura-fina" title="Você">
+          <canvas id="hud-retrato" width="64" height="64"></canvas>
+          <span id="hud-nome"></span>
+        </div>
+        <div id="objetivo" class="objetivo"><span class="objetivo-rotulo">Objetivo</span><span id="objetivo-texto"></span><span id="objetivo-pistas" class="pistas"></span></div>
+      </div>
+      <div class="hud-botoes">
+        <button id="btn-diario-hud" class="btn-icone" aria-label="Diário de pistas (J)" title="Diário de pistas (J)"><span class="ico ico-diario"></span></button>
+        <button id="btn-camarim-hud" class="btn-icone" aria-label="Camarim (R)" title="Camarim (R)"><span class="ico ico-cabide"></span></button>
+        <button id="btn-mapa-hud" class="btn-icone" aria-label="Mapa (M)" title="Mapa (M)"><span class="ico ico-mapa"></span></button>
+        <button id="btn-som" class="btn-icone" aria-label="Som" title="Som"><span class="ico ico-som"></span></button>
+        <button id="btn-pausa" class="btn-icone" aria-label="Pausa (Esc)" title="Pausa (Esc)"><span class="ico ico-pausa"></span></button>
+      </div>
+      <div id="rotulo-npc" class="rotulo-npc" hidden></div>
+      <div id="prompt" class="prompt" hidden><kbd>E</kbd><span id="prompt-texto"></span></div>
+      <div id="dicas-teclado" class="dicas-teclado">
+        <span><kbd>WASD</kbd> andar</span><span><kbd>Shift</kbd> correr</span><span><kbd>E</kbd> interagir</span><span><kbd>Q</kbd> acenar</span><span><kbd>J</kbd> pistas</span><span><kbd>R</kbd> camarim</span><span><kbd>M</kbd> mapa</span>
+      </div>
+    </div>
+
+    <!-- Controles de toque -->
+    <div id="toque" hidden>
+      <div id="zona-joystick"></div>
+      <div id="joystick" hidden><div id="joystick-pino"></div></div>
+      <button id="btn-interagir" class="btn-toque btn-grande" aria-label="Interagir"><span class="ico ico-balao"></span></button>
+      <button id="btn-correr" class="btn-toque" aria-label="Correr"><span class="ico ico-correr"></span></button>
+      <button id="btn-diario" class="btn-toque" aria-label="Diário"><span class="ico ico-diario"></span></button>
+      <button id="btn-camarim" class="btn-toque" aria-label="Camarim"><span class="ico ico-cabide"></span></button>
+    </div>
+
+    <!-- Diálogo -->
+    <div id="dialogo" class="moldura" hidden>
+      <div class="retrato moldura-fina" id="dlg-retrato-caixa"><canvas id="dlg-retrato" width="64" height="64"></canvas></div>
+      <div class="dialogo-corpo">
+        <div id="dlg-nome" class="placa-nome"></div>
+        <p id="dlg-texto"></p>
+        <div id="dlg-opcoes" class="opcoes"></div>
+      </div>
+      <div class="retrato eu moldura-fina" id="dlg-eu-caixa" hidden><canvas id="dlg-eu" width="64" height="64"></canvas></div>
+      <div class="dialogo-seta" id="dlg-seta" aria-hidden="true"></div>
+    </div>
+
+    <!-- Aviso rápido -->
+    <div id="aviso" class="aviso" hidden></div>
+
+    <!-- Diário de pistas -->
+    <div id="diario" class="painel-tela" hidden>
+      <div class="moldura painel">
+        <button class="fechar" data-fechar aria-label="Fechar">×</button>
+        <h2>Diário de pistas</h2>
+        <p class="nota">Qual é o tema secreto do acampamento? Cada pessoa sabe um pedacinho.</p>
+        <ul id="lista-pistas" class="lista-pistas"></ul>
+        <h3>Achados pela chácara</h3>
+        <ul id="lista-extras" class="lista-pistas extras"></ul>
+        <p class="nota" id="diario-dica"></p>
+      </div>
+    </div>
+
+    <!-- Enigma das lonas -->
+    <div id="enigma" class="painel-tela" hidden>
+      <div class="moldura painel">
+        <button class="fechar" data-fechar aria-label="Fechar">×</button>
+        <h2>As lonas do morro</h2>
+        <p id="enigma-texto"></p>
+        <div id="enigma-caixas" class="caixas-letras" aria-hidden="true"></div>
+        <button class="btn pequeno" id="enigma-naosei">🤔 Não sei…</button>
+        <input id="enigma-entrada" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Digite a palavra de 9 letras">
+        <p id="enigma-retorno" class="retorno" aria-live="polite"></p>
+        <div class="linha-botoes">
+          <button class="btn fraco" data-fechar>Voltar</button>
+          <button class="btn principal" id="enigma-ok">Revelar!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revelação -->
+    <div id="revelacao" hidden>
+      <div class="rev-caixa">
+        <p class="rev-pre">O tema da festa é…</p>
+        <h1 class="rev-palavra" id="rev-palavra">HOLLYWOOD</h1>
+        <p class="rev-sub">O bebê João revelou o mistério! Novas peças da <b>Coleção Calçada da Fama</b> foram liberadas no camarim. ★</p>
+        <button class="btn principal" id="rev-ok">Continuar</button>
+      </div>
+    </div>
+
+    <!-- Mapa -->
+    <div id="mapa" class="painel-tela" hidden>
+      <div class="moldura painel largo">
+        <button class="fechar" data-fechar aria-label="Fechar">×</button>
+        <h2>Mapa da chácara</h2>
+        <div class="mapa-caixa"><canvas id="mapa-canvas" width="432" height="484"></canvas><div id="mapa-rotulos"></div></div>
+        <p class="nota">Áreas marcadas com * ainda são provisórias (sem foto de referência).</p>
+      </div>
+    </div>
+
+    <!-- Pausa -->
+    <div id="pausa" class="painel-tela" hidden>
+      <div class="moldura painel">
+        <h2>Pausa</h2>
+        <div class="menu">
+          <button class="btn principal" data-acao="voltar">Continuar</button>
+          <button class="btn" data-acao="camarim">Camarim</button>
+          <button class="btn" data-acao="diario">Diário de pistas</button>
+          <button class="btn" data-acao="mapa">Mapa</button>
+          <button class="btn" data-acao="config">Configurações</button>
+          <button class="btn" data-acao="tela-cheia">Tela cheia</button>
+          <button class="btn fraco" data-acao="menu">Menu principal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configurações -->
+    <div id="config" class="painel-tela" hidden>
+      <div class="moldura painel">
+        <button class="fechar" data-fechar aria-label="Fechar">×</button>
+        <h2>Configurações</h2>
+        <div class="config-linha"><span>Zoom da câmera</span><div class="grupo-chips" id="cfg-zoom"></div></div>
+        <div class="config-linha"><span>Som e música</span><button class="chip" id="cfg-som"></button></div>
+        <div class="config-linha"><span>Celular em pé: girar o jogo</span><button class="chip" id="cfg-girar"></button></div>
+        <div class="config-linha"><span>Vibração (celular)</span><button class="chip" id="cfg-vibra"></button></div>
+        <div class="config-linha"><span>Dicas de teclado</span><button class="chip" id="cfg-dicas"></button></div>
+        <div class="linha-botoes">
+          <button class="btn perigo" id="cfg-apagar">Apagar dados salvos</button>
+          <button class="btn principal" data-fechar>Fechar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Créditos -->
+    <div id="creditos" class="painel-tela" hidden>
+      <div class="moldura painel">
+        <button class="fechar" data-fechar aria-label="Fechar">×</button>
+        <h2>Créditos</h2>
+        <div class="texto-longo">
+          <p><b>Mistério no Tapete Vermelho</b> — RPG em pixel art.</p>
+          <p>Toda a arte (personagens, roupas, cenário), a música e os sons são gerados por código neste projeto.</p>
+          <p>Cenário: uma noite de estreia com tapete vermelho, criada para este jogo.</p>
+          <p>Fonte Pixelify Sans (SIL Open Font License). Motor e estilo de interface baseados nos jogos do mesmo autor.</p>
+          <p>Os personagens têm nomes de brincadeira e não representam as celebridades reais.</p>
+          <p class="contador" id="contador-creditos">Contando acessos…</p>
+          <p class="nota">O contador só envia um "+1" para um serviço de contagem; nenhuma foto ou dado pessoal sai do aparelho. Só o nome escolhido no jogo é enviado ao organizador, para saber quem jogou.</p>
+        </div>
+        <button class="btn principal" data-fechar>Fechar</button>
+      </div>
+    </div>
+
+    <!-- Camarim (criação de personagem) -->
+    <div id="camarim" hidden>
+      <div class="cam-topo">
+        <button class="btn-icone" id="cam-voltar" aria-label="Voltar"><span class="ico ico-voltar"></span></button>
+        <h2 id="cam-titulo">Camarim</h2>
+        <label class="cam-nome-topo">Seu nome: <input id="cam-nome" maxlength="22" placeholder="Digite seu nome" autocomplete="off"></label>
+        <button class="btn principal pequeno" id="cam-pronto">Pronto!</button>
+      </div>
+      <div class="cam-palco">
+        <div class="cam-cortina"></div>
+        <div class="cam-retrato moldura-fina"><canvas id="cam-retrato" width="64" height="64"></canvas></div>
+        <div class="cam-foto-botoes">
+          <button class="btn principal pequeno" id="cam-palco-foto">📷 Tirar foto do rosto</button>
+          <button class="btn pequeno" id="cam-palco-galeria">🖼 Foto da galeria</button>
+        </div>
+        <div class="cam-boneco"><canvas id="cam-boneco" width="88" height="44"></canvas></div>
+        <div class="cam-ferramentas">
+          <button class="chip" id="cam-girar">↻ Girar</button>
+          <button class="chip" id="cam-andar">Andar</button>
+          <button class="chip" id="cam-acenar">Acenar</button>
+        </div>
+      </div>
+      <div class="cam-painel moldura">
+        <nav class="abas" id="cam-abas" role="tablist"></nav>
+        <div class="cam-corpo" id="cam-corpo"></div>
+      </div>
+    </div>
+
+    <!-- Câmera ao vivo -->
+    <div id="modal-camera" class="painel-tela" hidden>
+      <div class="moldura painel">
+        <h2>Tirar foto do rosto</h2>
+        <p class="nota privacidade-linha">A câmera é usada só para esta foto. A foto fica neste aparelho e nunca vai para a internet.</p>
+        <div id="cam-ao-vivo">
+          <div class="cam-video">
+            <video id="cam-video" playsinline muted></video>
+            <svg class="cam-molde" viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <defs><mask id="furo"><rect width="300" height="300" fill="#fff"/><ellipse cx="150" cy="132" rx="84" ry="98" fill="#000"/></mask></defs>
+              <rect width="300" height="300" fill="rgba(0,0,0,0.45)" mask="url(#furo)"/>
+              <ellipse cx="150" cy="132" rx="84" ry="98" fill="none" stroke="#f2c14e" stroke-width="3" stroke-dasharray="9 6"/>
+              <circle cx="115" cy="122" r="8" fill="rgba(242,193,78,0.3)" stroke="#fff" stroke-width="2"/>
+              <circle cx="185" cy="122" r="8" fill="rgba(242,193,78,0.3)" stroke="#fff" stroke-width="2"/>
+              <line x1="132" y1="178" x2="168" y2="178" stroke="#fff" stroke-width="3"/>
+            </svg>
+            <p class="cam-dica">Encaixe o rosto no contorno: <b>olhos nas bolinhas</b> e <b>boca na linha</b>.</p>
+          </div>
+        </div>
+        <p class="nota" id="cam-erro" hidden></p>
+        <div class="linha-botoes">
+          <button class="btn fraco" id="cam-cancelar">Cancelar</button>
+          <button class="btn" id="cam-nativa">Abrir a câmera do aparelho</button>
+          <button class="btn principal" id="cam-clique">📸 Tirar foto</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Posicionar o rosto (câmera ou galeria) -->
+    <div id="modal-ajuste" class="painel-tela" hidden>
+      <div class="moldura painel largo">
+        <h2>Posicione o seu rosto</h2>
+        <p class="nota">Arraste a foto, aproxime e gire até os <b>olhos ficarem nas bolinhas</b> e a <b>boca na linha</b>. No celular, use dois dedos para aproximar e girar.</p>
+        <div class="aj-area">
+          <canvas id="aj-canvas" width="300" height="300"></canvas>
+          <div class="aj-lado">
+            <div class="aj-previa moldura-fina"><canvas id="aj-previa" width="64" height="64"></canvas></div>
+            <span class="nota">Como vai ficar</span>
+            <div class="faixa"><label for="aj-zoom">Aproximar</label><input type="range" id="aj-zoom" min="0.3" max="4" step="0.02" value="1"></div>
+            <div class="faixa"><label for="aj-giro">Girar</label><input type="range" id="aj-giro" min="-45" max="45" step="1" value="0"></div>
+            <div class="faixa"><label for="aj-brilho">Brilho</label><input type="range" id="aj-brilho" min="-0.5" max="0.5" step="0.02" value="0"></div>
+            <button class="btn pequeno fraco" id="aj-auto">Voltar ao automático</button>
+          </div>
+        </div>
+        <div class="linha-botoes">
+          <button class="btn fraco" id="aj-cancelar">Cancelar</button>
+          <button class="btn principal" id="aj-ok">Ficou certinho!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmação -->
+    <div id="confirmar" class="painel-tela" hidden>
+      <div class="moldura painel">
+        <h2 id="conf-titulo"></h2>
+        <p id="conf-texto"></p>
+        <div class="linha-botoes">
+          <button class="btn fraco" id="conf-nao">Cancelar</button>
+          <button class="btn principal" id="conf-sim">Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+    <input type="file" id="arquivo-foto" accept="image/*" hidden>
+    <input type="file" id="arquivo-camera" accept="image/*" capture="user" hidden>
+  </div>
+  <noscript>Este jogo precisa de JavaScript ativado.</noscript>
+  <script type="module" src="src/main.js?v=202611022238"></script>
+</body>
+</html>
